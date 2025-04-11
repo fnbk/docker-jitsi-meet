@@ -37,3 +37,20 @@ If you plan to install the jitsi-meet stack on a Kubernetes cluster you can find
 ## TODO
 
 * Builtin TURN server.
+
+
+# Florian
+
+```
+# prepare
+sudo rm -fr .jitsi-meet-cfg
+mkdir -p ~/.jitsi-meet-cfg/{web,transcripts,prosody/config,jicofo,jvb,jibri}
+
+# start
+docker compose -f docker-compose.yml -f transcriber.yml -f vosk.yml up
+
+# visit localhost and accept opening without valid SSL Certificate
+https://localhost:8443
+
+
+```

@@ -1,0 +1,10 @@
+services:
+    vosk:
+        image: alphacep/kaldi-en:latest
+        restart: ${RESTART_POLICY:-unless-stopped}
+        ports:
+            - 2700:2700
+        networks:
+            meet.jitsi:
+
+    
