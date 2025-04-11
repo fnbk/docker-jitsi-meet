@@ -1,6 +1,6 @@
 services:
     vosk:
-        image: alphacep/kaldi-en:latest
+        image: alphacep/kaldi-de:latest
         restart: ${RESTART_POLICY:-unless-stopped}
         ports:
             - 2700:2700
