@@ -71,11 +71,9 @@ services:
             - SENTRY_ENVIRONMENT
             - SENTRY_RELEASE
             - TZ
-            #
-            - JIGASI_TRANSCRIBER_CUSTOM_SERVICE=org.jitsi.jigasi.transcription.VoskTranscriptionService
-            - JIGASI_TRANSCRIBER_VOSK_URL=ws://vosk:2700
         depends_on:
             - prosody
             - vosk
+            - libretranslate
         networks:
             meet.jitsi:

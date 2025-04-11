@@ -1,0 +1,9 @@
+
+POST http://0.0.0.0:5000/translate HTTP/1.1
+content-type: application/json
+
+{
+    "q": "Wie geht's?",
+    "source": "de",
+    "target": "en"
+}
