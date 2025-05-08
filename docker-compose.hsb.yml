@@ -1,6 +1,9 @@
-version: '3.5'
-
 services:
+
+    #
+    # Jitsi Meet
+    #
+
     # Frontend
     web:
         image: jitsi/web:${JITSI_IMAGE_VERSION:-stable-10184}
@@ -192,7 +195,8 @@ services:
 
     # XMPP server
     prosody:
-        image: jitsi/prosody:${JITSI_IMAGE_VERSION:-stable-10184}
+        # image: jitsi/prosody:${JITSI_IMAGE_VERSION:-stable-10184}
+        image: jitsi/prosody:${JITSI_IMAGE_VERSION:-unstable-2025-04-11}
         restart: ${RESTART_POLICY:-unless-stopped}
         expose:
             - '${XMPP_PORT:-5222}'
@@ -496,6 +500,175 @@ services:
             - XMPP_PORT
         depends_on:
             - prosody
+        networks:
+            meet.jitsi:
+
+    # Transcriber
+    transcriber:
+        image: jitsi/jigasi:${JITSI_IMAGE_VERSION:-stable-10184}
+        restart: ${RESTART_POLICY:-unless-stopped}
+        ports:
+            - '${JIGASI_PORT_MIN:-20000}-${JIGASI_PORT_MAX:-20050}:${JIGASI_PORT_MIN:-20000}-${JIGASI_PORT_MAX:-20050}/udp'
+        volumes:
+            - ${CONFIG}/transcriber:/config:Z
+            - ${CONFIG}/transcripts:/tmp/transcripts:Z
+        environment:
+            - AUTOSCALER_SIDECAR_KEY_FILE
+            - AUTOSCALER_SIDECAR_KEY_ID
+            - AUTOSCALER_SIDECAR_GROUP_NAME
+            - AUTOSCALER_SIDECAR_HOST_ID
+            - AUTOSCALER_SIDECAR_INSTANCE_ID
+            - AUTOSCALER_SIDECAR_PORT
+            - AUTOSCALER_SIDECAR_REGION
+            - AUTOSCALER_SIDECAR_SHUTDOWN_POLLING_INTERVAL
+            - AUTOSCALER_SIDECAR_STATS_POLLING_INTERVAL
+            - AUTOSCALER_URL
+            - BOSH_URL_PATTERN
+            - XMPP_AUTH_DOMAIN
+            - XMPP_GUEST_DOMAIN
+            - XMPP_MUC_DOMAIN
+            - XMPP_INTERNAL_MUC_DOMAIN
+            - XMPP_SERVER
+            - XMPP_PORT
+            - XMPP_HIDDEN_DOMAIN
+            - XMPP_RECORDER_DOMAIN
+            - XMPP_DOMAIN
+            - PUBLIC_URL
+            - JIGASI_CONFIGURATION
+            - JIGASI_JVB_TIMEOUT
+            - JIGASI_LOCAL_REGION
+            - JIGASI_LOG_FILE
+            - JIGASI_MODE=transcriber
+            - JIGASI_XMPP_USER
+            - JIGASI_XMPP_PASSWORD
+            - JIGASI_BREWERY_MUC
+            - JIGASI_TRANSCRIBER_ADVERTISE_URL
+            - JIGASI_TRANSCRIBER_CUSTOM_SERVICE
+            - JIGASI_TRANSCRIBER_CUSTOM_TRANSLATION_SERVICE
+            - JIGASI_TRANSCRIBER_LIBRETRANSLATE_URL
+            - JIGASI_TRANSCRIBER_ENABLE_SAVING
+            - JIGASI_TRANSCRIBER_ENABLE_TRANSLATION
+            - JIGASI_TRANSCRIBER_FILTER_SILENCE
+            - JIGASI_TRANSCRIBER_OCI_COMPARTMENT
+            - JIGASI_TRANSCRIBER_OCI_REGION
+            - JIGASI_TRANSCRIBER_PASSWORD
+            - JIGASI_TRANSCRIBER_RECORD_AUDIO
+            - JIGASI_TRANSCRIBER_REMOTE_CONFIG_URL
+            - JIGASI_TRANSCRIBER_REMOTE_CONFIG_URL_KEY_PATH
+            - JIGASI_TRANSCRIBER_REMOTE_CONFIG_URL_KEY_ID
+            - JIGASI_TRANSCRIBER_REMOTE_CONFIG_URL_AUD
+            - JIGASI_TRANSCRIBER_SEND_TXT
+            - JIGASI_TRANSCRIBER_USER
+            - JIGASI_TRANSCRIBER_VOSK_URL
+            - JIGASI_TRANSCRIBER_WHISPER_URL
+            - JIGASI_TRANSCRIBER_WHISPER_PRIVATE_KEY
+            - JIGASI_TRANSCRIBER_WHISPER_PRIVATE_KEY_NAME
+            - GC_PROJECT_ID
+            - GC_PRIVATE_KEY_ID
+            - GC_PRIVATE_KEY
+            - GC_CLIENT_EMAIL
+            - GC_CLIENT_ID
+            - GC_CLIENT_CERT_URL
+            - SHUTDOWN_REST_ENABLED
+            - SENTRY_DSN="${JIGASI_SENTRY_DSN:-0}"
+            - SENTRY_ENVIRONMENT
+            - SENTRY_RELEASE
+            - TZ
+        depends_on:
+            - prosody
+            - vosk-en
+            - vosk-de
+            - vosk-hsb
+            - libretranslate-proxy
+        networks:
+            meet.jitsi:
+
+    #
+    # vosk
+    #
+
+    # Vosk DE
+    vosk-de:
+        image: alphacep/kaldi-de:latest
+        restart: ${RESTART_POLICY:-unless-stopped}
+        # ports:
+        #     - 2700:2700
+        # depends_on:
+        #     - jigasi
+        networks:
+            meet.jitsi:
+
+    # Vosk EN
+    vosk-en:
+        image: alphacep/kaldi-en:latest
+        restart: ${RESTART_POLICY:-unless-stopped}
+        # ports:
+        #     - 2700:2700
+        # depends_on:
+        #     - jigasi
+        networks:
+            meet.jitsi:
+
+    # Vosk HSB
+    vosk-hsb:
+        image: fnbk/vosk-hsb:250508
+        restart: ${RESTART_POLICY:-unless-stopped}
+        environment:
+            - VOSK_SAMPLE_RATE=48000
+            - VOSK_LOG_AUDIO=false
+            # - MODEL_PATH_FULL=/whisper/Korla/hsb_stt_demo/hsb_whisper/ggml-model.q8_0.bin
+        # volumes:
+        #     - ./logs:/logs
+        #     - ./whisper:/whisper
+        # ports:
+        #     - 2700:2700
+        # depends_on:
+        #     - jigasi
+        networks:
+            meet.jitsi:
+
+    #
+    # libretranslate
+    #
+
+    # libretranslate-backend:
+    libretranslate-original:
+        image: libretranslate/libretranslate:v1.6.5
+        restart: ${RESTART_POLICY:-unless-stopped}
+        # ports:
+        #   - "5000:5000"
+        healthcheck:
+            test: ['CMD-SHELL', './venv/bin/python scripts/healthcheck.py']     
+        environment:
+            - LT_UPDATE_MODELS=true
+            - LT_LOAD_ONLY=en,de
+            - ARGOS_DEBUG=1
+        volumes:
+            - ${CONFIG}/libretranslate/local:/home/libretranslate/.local:Z
+            - ${CONFIG}/libretranslate/keys:/app/db:Z
+        networks:
+            meet.jitsi:
+
+    # sorbian:
+    libretranslate-hsb:
+        image: fnbk/libretranslate-hsb:250508
+        # ports:
+        # - "5000:5000"
+        networks:
+            meet.jitsi:
+
+
+    # libretranslate:
+    libretranslate-proxy:
+        image: fnbk/libretranslate-proxy:250508
+        ports:
+        - "5000:5000"
+        environment:
+        - LIBRETRANSLATE_ORIGINAL_URL=http://libretranslate-original:5000/translate
+        - LIBRETRANSLATE_HSB_URL=http://libretranslate-hsb:5000/translate
+        depends_on:
+        - libretranslate-original
+        - libretranslate-hsb
         networks:
             meet.jitsi:
 
